@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>진아지유 쿠폰보드</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #FF6B6B;
+            --secondary-color: #4ECDC4;
+            --background-color: #F7FFF7;
+            --text-color: #2C3E50;
+            --card-bg: #FFFFFF;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        .dashboard {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            grid-column: 1 / -1;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        h1 {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+        .tab {
+            padding: 0.5rem 1.5rem;
+            background-color: var(--card-bg);
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-color);
+            transition: all 0.3s ease;
+            margin: 0 0.5rem;
+        }
+        .tab.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        #couponContent {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem; /* 간격을 줄임 */
+            width: 100%;
+            justify-content: center;
+        }
+        .coupon-card {
+            background-color: var(--card-bg);
+            border-radius: 15px;
+            padding: 0.5rem; /* 패딩을 줄임 */
+            min-height: 100px; /* 세로 길이를 줄임 */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            text-align: center; /* 카드 내용 중앙 정렬 */
+        }
+        .coupon-info {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 0.25rem; /* 간격을 줄임 */
+        }
+        .coupon-icon {
+            font-size: 2rem; /* 아이콘 크기를 줄임 */
+            margin-right: 0.25rem; /* 아이콘과 값 사이 간격을 줄임 */
+        }
+        .coupon-label-value {
+            display: flex;
+            align-items: center;
+        }
+        .coupon-label {
+            font-size: 1.5rem; /* 라벨 크기를 줄임 */
+            margin-right: 0.25rem; /* 라벨과 값 사이 간격을 줄임 */
+        }
+        .coupon-value {
+            font-size: 1.5rem; /* 값 크기를 줄임 */
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        .coupon-controls {
+            display: flex;
+            justify-content: space-between; /* 버튼을 양끝으로 이동 */
+            margin-top: 0.5rem;
+        }
+        .control-button {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            width: 40px; /* 버튼 크기를 늘림 */
+            height: 40px; /* 버튼 크기를 늘림 */
+            border-radius: 50%;
+            font-size: 1.2rem; /* 버튼 폰트 크기를 늘림 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .control-button:hover {
+            transform: scale(1.1);
+        }
+        @media (max-width: 600px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>진아지유 쿠폰보드</h1>
+            <div class="tabs">
+                <button class="tab active" onclick="showContent('jina')">진아</button>
+                <button class="tab" onclick="showContent('jiyu')">지유</button>
+            </div>
+        </div>
+        <div id="couponContent"></div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+          apiKey: "AIzaSyBMnL-22uAjAb7kivEJWPgByZDc_NRI3Fw",
+          authDomain: "jinajiyoucoupon.firebaseapp.com",
+          projectId: "jinajiyoucoupon",
+          storageBucket: "jinajiyoucoupon.appspot.com",
+          messagingSenderId: "786090102552",
+          appId: "1:786090102552:web:f3a1ebc974df207962986d",
+          measurementId: "G-HMXQ3QX2RV"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let coupons = {
+            jina: {
+                gameTime: 60,
+                sleepCoupon: 5,
+                dadDateCoupon: 3,
+                momDateCoupon: 3,
+                movieCoupon: 2,
+                kidsCafeCoupon: 2,
+                familyDateCoupon: 2
+            },
+            jiyu: {
+                gameTime: 60,
+                sleepCoupon: 5,
+                dadDateCoupon: 3,
+                momDateCoupon: 3,
+                movieCoupon: 2,
+                kidsCafeCoupon: 2,
+                familyDateCoupon: 2
+            }
+        };
+
+        const labels = {
+            gameTime: '게임 시간',
+            sleepCoupon: '함께 자기',
+            dadDateCoupon: '아빠랑 데이트',
+            momDateCoupon: '엄마랑 데이트',
+            movieCoupon: '영화 보기',
+            kidsCafeCoupon: '키즈카페',
+            familyDateCoupon: '가족 데이트'
+        };
+
+        const icons = {
+            gameTime: '🎮',
+            sleepCoupon: '🛌',
+            dadDateCoupon: '👨',
+            momDateCoupon: '👩',
+            movieCoupon: '🎬',
+            kidsCafeCoupon: '☕',
+            familyDateCoupon: '👨‍👩‍👧‍👦'
+        };
+
+        const order = ['gameTime', 'sleepCoupon', 'dadDateCoupon', 'momDateCoupon', 'familyDateCoupon', 'movieCoupon', 'kidsCafeCoupon'];
+
+        function showContent(name) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelector(`.tab:nth-child(${name === 'jina' ? 1 : 2})`).classList.add('active');
+            displayCoupons(name);
+        }
+
+        function displayCoupons(name) {
+            const content = document.getElementById('couponContent');
+            content.innerHTML = '';
+            
+            order.forEach(key => {
+                const value = coupons[name][key];
+                const card = document.createElement('div');
+                card.className = 'coupon-card';
+                card.innerHTML = `
+                    <div class="coupon-info">
+                        <span class="coupon-icon">${icons[key]}</span>
+                        <div class="coupon-label-value">
+                            <span class="coupon-label">${labels[key]}:</span>
+                            <span class="coupon-value" id="${name}-${key}">${value}${key === 'gameTime' ? '분' : ''}</span>
+                        </div>
+                    </div>
+                    <div class="coupon-controls">
+                        <button class="control-button" onclick="updateCoupon('${name}', '${key}', ${key === 'gameTime' ? -5 : -1})">-</button>
+                        <button class="control-button" onclick="updateCoupon('${name}', '${key}', ${key === 'gameTime' ? 5 : 1})">+</button>
+                    </div>
+                `;
+                content.appendChild(card);
+            });
+        }
+
+        function updateCoupon(name, coupon, change) {
+            coupons[name][coupon] += change;
+            if (coupons[name][coupon] < 0) coupons[name][coupon] = 0;
+            document.getElementById(`${name}-${coupon}`).textContent = coupons[name][coupon] + (coupon === 'gameTime' ? '분' : '');
+            saveCouponsToFirebase();
+            displayCoupons(name); // 화면을 다시 그리도록 추가
+        }
+
+        function saveCouponsToFirebase() {
+            Object.keys(coupons).forEach(name => {
+                Object.keys(coupons[name]).forEach(key => {
+                    if (coupons[name][key] === undefined) {
+                        coupons[name][key] = 0;
+                    }
+                });
+            });
+            database.ref('coupons').set(coupons);
+        }
+
+        function loadCouponsFromFirebase() {
+            database.ref('coupons').once('value').then((snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    Object.keys(coupons).forEach(name => {
+                        coupons[name] = { ...coupons[name], ...data[name] };
+                        Object.keys(coupons[name]).forEach(key => {
+                            if (coupons[name][key] === undefined) {
+                                coupons[name][key] = 0;
+                            }
+                        });
+                    });
+                    displayCoupons('jina');
+                } else {
+                    saveCouponsToFirebase();
+                }
+            }).catch((error) => {
+                console.error("Firebase 데이터 로드 에러:", error);
+                displayCoupons('jina');
+            });
+        }
+
+        database.ref('coupons').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                Object.keys(coupons).forEach(name => {
+                    coupons[name] = { ...coupons[name], ...data[name] };
+                    Object.keys(coupons[name]).forEach(key => {
+                        if (coupons[name][key] === undefined) {
+                            coupons[name][key] = 0;
+                        }
+                    });
+                });
+                const activeName = document.querySelector('.tab.active').textContent.toLowerCase();
+                displayCoupons(activeName);
+            }
+        });
+
+        loadCouponsFromFirebase();
+    </script>
+</body>
+</html>
